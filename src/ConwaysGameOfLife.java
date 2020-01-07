@@ -15,11 +15,8 @@ public class ConwaysGameOfLife extends JFrame {
     private static final Dimension MINIMUM_WINDOW_SIZE = new Dimension(400, 400);
     private static final int BLOCK_SIZE = 10;
 
-    private JMenuBar menu;
-    private JMenu fileMenu, gameMenu, helpMenu;
-    private JMenuItem optionsItem, exitItem;
-    private JMenuItem autofillItem, playItem, stopItem, resetItem;
-    private JMenuItem aboutItem, sourceItem;
+    private JMenuItem playItem;
+    private JMenuItem stopItem;
     private int i_movesPerSecond = 3;
     private GameBoard gameBoard;
     private Thread game;
@@ -52,26 +49,26 @@ public class ConwaysGameOfLife extends JFrame {
     }
 
     private void SetupMenu() {
-        menu = new JMenuBar();
+        JMenuBar menu = new JMenuBar();
         setJMenuBar(menu);
-        fileMenu = new JMenu("File");
+        JMenu fileMenu = new JMenu("File");
         menu.add(fileMenu);
-        gameMenu = new JMenu("Game");
+        JMenu gameMenu = new JMenu("Game");
         menu.add(gameMenu);
-        helpMenu = new JMenu("Help");
+        JMenu helpMenu = new JMenu("Help");
         menu.add(helpMenu);
 
-        optionsItem = new JMenuItem("Options");
+        JMenuItem optionsItem = new JMenuItem("Options");
         optionsItem.addActionListener(event -> changeNumberOfMoves());
 
-        exitItem = new JMenuItem("Exit");
+        JMenuItem exitItem = new JMenuItem("Exit");
         exitItem.addActionListener(event -> System.exit(0));
 
         fileMenu.add(optionsItem);
         fileMenu.add(new JSeparator());
         fileMenu.add(exitItem);
 
-        autofillItem = new JMenuItem("Autofill");
+        JMenuItem autofillItem = new JMenuItem("Autofill");
         autofillItem.addActionListener(event -> autoFillCells());
 
         playItem = new JMenuItem("Play");
@@ -81,7 +78,7 @@ public class ConwaysGameOfLife extends JFrame {
         stopItem.setEnabled(false);
         stopItem.addActionListener(event -> setGameBeingPlayed(false));
 
-        resetItem = new JMenuItem("Reset");
+        JMenuItem resetItem = new JMenuItem("Reset");
         resetItem.addActionListener(event -> {
             gameBoard.resetBoard();
             gameBoard.repaint();
@@ -93,9 +90,9 @@ public class ConwaysGameOfLife extends JFrame {
         gameMenu.add(stopItem);
         gameMenu.add(resetItem);
 
-        aboutItem = new JMenuItem("About");
+        JMenuItem aboutItem = new JMenuItem("About");
         aboutItem.addActionListener(event -> showAboutBox());
-        sourceItem = new JMenuItem("Source");
+        JMenuItem sourceItem = new JMenuItem("Source");
         sourceItem.addActionListener(event -> navigateToSource());
         helpMenu.add(aboutItem);
         helpMenu.add(sourceItem);
@@ -116,17 +113,25 @@ public class ConwaysGameOfLife extends JFrame {
 
     public void navigateToSource() {
 
-            Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
-            try {
-                desktop.browse(new URI("https://github.com/Burke9077/Conway-s-Game-of-Life"));
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(null, "Source is available on GitHub at:\nhttps://github.com/Burke9077/Conway-s-Game-of-Life", "Source", JOptionPane.INFORMATION_MESSAGE);
-            }
+        Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+        try {
+            desktop.browse(new URI("https://github.com/Burke9077/Conway-s-Game-of-Life"));
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(null, "Source is available on GitHub at:\nhttps://github.com/Burke9077/Conway-s-Game-of-Life", "Source", JOptionPane.INFORMATION_MESSAGE);
+        }
 
     }
 
     private void showAboutBox() {
-        JOptionPane.showMessageDialog(null, "Conway's game of life was a cellular animation devised by the mathematician John Conway.\nThis Java, swing based implementation was created by Matthew Burke.\n\nhttp://burke9077.com\nBurke9077@gmail.com\n@burke9077\n\nCreative Commons Attribution 4.0 International");
+        JOptionPane.showMessageDialog(null, """
+                Conway's game of life was a cellular animation devised by the mathematician John Conway.
+                This Java, swing based implementation was created by Matthew Burke.
+
+                http://burke9077.com
+                Burke9077@gmail.com
+                @burke9077
+
+                Creative Commons Attribution 4.0 International""");
     }
 
     private void autoFillCells() {
@@ -140,17 +145,14 @@ public class ConwaysGameOfLife extends JFrame {
         p_autoFill.setOpaque(false);
         f_autoFill.add(p_autoFill);
         p_autoFill.add(new JLabel("What percentage should be filled? "));
-        Object[] percentageOptions = {"Select", 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95};
-        final JComboBox cb_percent = new JComboBox(percentageOptions);
+        Integer[] percentageOptions = { 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95};
+        final var cb_percent = new JComboBox<>(percentageOptions);
         p_autoFill.add(cb_percent);
-        cb_percent.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (cb_percent.getSelectedIndex() > 0) {
-                    gameBoard.resetBoard();
-                    gameBoard.randomlyFillBoard((Integer) cb_percent.getSelectedItem());
-                    f_autoFill.dispose();
-                }
+        cb_percent.addActionListener(e -> {
+            if (cb_percent.getSelectedIndex() > 0) {
+                gameBoard.resetBoard();
+                gameBoard.randomlyFillBoard((Integer) cb_percent.getSelectedItem());
+                f_autoFill.dispose();
             }
         });
         f_autoFill.setVisible(true);
@@ -171,12 +173,9 @@ public class ConwaysGameOfLife extends JFrame {
         final JComboBox cb_seconds = new JComboBox(secondOptions);
         p_options.add(cb_seconds);
         cb_seconds.setSelectedItem(i_movesPerSecond);
-        cb_seconds.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                i_movesPerSecond = (Integer) cb_seconds.getSelectedItem();
-                f_options.dispose();
-            }
+        cb_seconds.addActionListener(ae -> {
+            i_movesPerSecond = (Integer) cb_seconds.getSelectedItem();
+            f_options.dispose();
         });
         f_options.setVisible(true);
     }
@@ -193,7 +192,7 @@ public class ConwaysGameOfLife extends JFrame {
         }
 
         private void updateArraySize() {
-            ArrayList<Point> removeList = new ArrayList<Point>(0);
+            ArrayList<Point> removeList = new ArrayList<>(0);
             for (Point current : point) {
                 if ((current.x > d_gameBoardSize.width - 1) || (current.y > d_gameBoardSize.height - 1)) {
                     removeList.add(current);
@@ -245,7 +244,7 @@ public class ConwaysGameOfLife extends JFrame {
                     g.setColor(Color.blue);
                     g.fillRect(BLOCK_SIZE + (BLOCK_SIZE * newPoint.x), BLOCK_SIZE + (BLOCK_SIZE * newPoint.y), BLOCK_SIZE, BLOCK_SIZE);
                 }
-            } catch (ConcurrentModificationException cme) {
+            } catch (ConcurrentModificationException ignored) {
             }
             // Setup grid
             g.setColor(Color.BLACK);
@@ -314,7 +313,7 @@ public class ConwaysGameOfLife extends JFrame {
             for (Point current : point) {
                 gameBoard[current.x + 1][current.y + 1] = true;
             }
-            ArrayList<Point> survivingCells = new ArrayList<Point>(0);
+            ArrayList<Point> survivingCells = new ArrayList<>(0);
             // Iterate through the array, follow game of life rules
             for (int i = 1; i < gameBoard.length - 1; i++) {
                 for (int j = 1; j < gameBoard[0].length - 1; j++) {
