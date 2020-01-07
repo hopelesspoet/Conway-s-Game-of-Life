@@ -27,6 +27,10 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
     public static void main(String[] args) {
         // Setup the swing specifics
         JFrame game = new ConwaysGameOfLife();
+        setupFrame(game);
+    }
+
+    private static void setupFrame(JFrame game) {
         game.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         game.setTitle("Conway's Game of Life");
         game.setIconImage(new ImageIcon(ConwaysGameOfLife.class.getResource("/images/logo.png")).getImage());
