@@ -38,7 +38,16 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
     }
 
     public ConwaysGameOfLife() {
-        // Setup menu
+        SetupMenu();
+        SetupGameBoard();
+    }
+
+    private void SetupGameBoard() {
+        gb_gameBoard = new GameBoard();
+        add(gb_gameBoard);
+    }
+
+    private void SetupMenu() {
         mb_menu = new JMenuBar();
         setJMenuBar(mb_menu);
         m_file = new JMenu("File");
@@ -74,9 +83,6 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
         mi_help_source.addActionListener(this);
         m_help.add(mi_help_about);
         m_help.add(mi_help_source);
-        // Setup game board
-        gb_gameBoard = new GameBoard();
-        add(gb_gameBoard);
     }
 
     public void setGameBeingPlayed(boolean isBeingPlayed) {
