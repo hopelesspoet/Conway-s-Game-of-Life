@@ -21,7 +21,7 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
     private JMenuItem autofillItem, playItem, stopItem, resetItem;
     private JMenuItem aboutItem, sourceItem;
     private int i_movesPerSecond = 3;
-    private GameBoard gb_gameBoard;
+    private GameBoard gameBoard;
     private Thread game;
 
     public static void main(String[] args) {
@@ -43,8 +43,8 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
     }
 
     private void SetupGameBoard() {
-        gb_gameBoard = new GameBoard();
-        add(gb_gameBoard);
+        gameBoard = new GameBoard();
+        add(gameBoard);
     }
 
     private void SetupMenu() {
@@ -98,7 +98,7 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
         if (isBeingPlayed) {
             playItem.setEnabled(false);
             stopItem.setEnabled(true);
-            game = new Thread(gb_gameBoard);
+            game = new Thread(gameBoard);
             game.start();
         } else {
             playItem.setEnabled(true);
@@ -154,16 +154,16 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     if (cb_percent.getSelectedIndex() > 0) {
-                        gb_gameBoard.resetBoard();
-                        gb_gameBoard.randomlyFillBoard((Integer) cb_percent.getSelectedItem());
+                        gameBoard.resetBoard();
+                        gameBoard.randomlyFillBoard((Integer) cb_percent.getSelectedItem());
                         f_autoFill.dispose();
                     }
                 }
             });
             f_autoFill.setVisible(true);
         } else if (ae.getSource().equals(resetItem)) {
-            gb_gameBoard.resetBoard();
-            gb_gameBoard.repaint();
+            gameBoard.resetBoard();
+            gameBoard.repaint();
         } else if (ae.getSource().equals(playItem)) {
             setGameBeingPlayed(true);
         } else if (ae.getSource().equals(stopItem)) {
