@@ -14,6 +14,7 @@ public class ConwaysGameOfLife extends JFrame {
     private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(800, 600);
     private static final Dimension MINIMUM_WINDOW_SIZE = new Dimension(400, 400);
     private static final int BLOCK_SIZE = 10;
+    private boolean isBeingPlayed = false;
 
     private JMenuItem playItem;
     private JMenuItem stopItem;
@@ -49,6 +50,16 @@ public class ConwaysGameOfLife extends JFrame {
     }
 
     private void SetupMenu() {
+        this.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                super.keyReleased(e);
+                if(e.getKeyChar() == ' '){
+                    isBeingPlayed = !isBeingPlayed;
+                    setGameBeingPlayed(isBeingPlayed);
+                }
+            }
+        });
         JMenuBar menu = new JMenuBar();
         setJMenuBar(menu);
         JMenu fileMenu = new JMenu("File");
