@@ -10,7 +10,7 @@ import javax.swing.*;
  * Conway's game of life is a cellular automaton devised by the
  * mathematician John Conway.
  */
-public class ConwaysGameOfLife extends JFrame implements ActionListener {
+public class ConwaysGameOfLife extends JFrame {
     private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(800, 600);
     private static final Dimension MINIMUM_WINDOW_SIZE = new Dimension(400, 400);
     private static final int BLOCK_SIZE = 10;
@@ -62,27 +62,30 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
         menu.add(helpMenu);
 
         optionsItem = new JMenuItem("Options");
-        optionsItem.addActionListener(this);
+        optionsItem.addActionListener(event -> changeNumberOfMoves());
 
         exitItem = new JMenuItem("Exit");
-        exitItem.addActionListener(this);
+        exitItem.addActionListener(event -> System.exit(0));
 
         fileMenu.add(optionsItem);
         fileMenu.add(new JSeparator());
         fileMenu.add(exitItem);
 
         autofillItem = new JMenuItem("Autofill");
-        autofillItem.addActionListener(this);
+        autofillItem.addActionListener(event -> autoFillCells());
 
         playItem = new JMenuItem("Play");
-        playItem.addActionListener(this);
+        playItem.addActionListener(event -> setGameBeingPlayed(true));
 
         stopItem = new JMenuItem("Stop");
         stopItem.setEnabled(false);
-        stopItem.addActionListener(this);
+        stopItem.addActionListener(event -> setGameBeingPlayed(false));
 
         resetItem = new JMenuItem("Reset");
-        resetItem.addActionListener(this);
+        resetItem.addActionListener(event -> {
+            gameBoard.resetBoard();
+            gameBoard.repaint();
+        });
 
         gameMenu.add(autofillItem);
         gameMenu.add(new JSeparator());
@@ -91,9 +94,9 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
         gameMenu.add(resetItem);
 
         aboutItem = new JMenuItem("About");
-        aboutItem.addActionListener(this);
+        aboutItem.addActionListener(event -> showAboutBox());
         sourceItem = new JMenuItem("Source");
-        sourceItem.addActionListener(this);
+        sourceItem.addActionListener(event -> navigateToSource());
         helpMenu.add(aboutItem);
         helpMenu.add(sourceItem);
     }
@@ -111,77 +114,71 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
         }
     }
 
-    @Override
-    public void actionPerformed(ActionEvent ae) {
-        if (ae.getSource().equals(exitItem)) {
-            // Exit the game
-            System.exit(0);
-        } else if (ae.getSource().equals(optionsItem)) {
-            // Put up an options panel to change the number of moves per second
-            final JFrame f_options = new JFrame();
-            f_options.setTitle("Options");
-            f_options.setSize(300, 60);
-            f_options.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - f_options.getWidth()) / 2,
-                    (Toolkit.getDefaultToolkit().getScreenSize().height - f_options.getHeight()) / 2);
-            f_options.setResizable(false);
-            JPanel p_options = new JPanel();
-            p_options.setOpaque(false);
-            f_options.add(p_options);
-            p_options.add(new JLabel("Number of moves per second:"));
-            Integer[] secondOptions = {1, 2, 3, 4, 5, 10, 15, 20};
-            final JComboBox cb_seconds = new JComboBox(secondOptions);
-            p_options.add(cb_seconds);
-            cb_seconds.setSelectedItem(i_movesPerSecond);
-            cb_seconds.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent ae) {
-                    i_movesPerSecond = (Integer) cb_seconds.getSelectedItem();
-                    f_options.dispose();
-                }
-            });
-            f_options.setVisible(true);
-        } else if (ae.getSource().equals(autofillItem)) {
-            final JFrame f_autoFill = new JFrame();
-            f_autoFill.setTitle("Autofill");
-            f_autoFill.setSize(360, 60);
-            f_autoFill.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - f_autoFill.getWidth()) / 2,
-                    (Toolkit.getDefaultToolkit().getScreenSize().height - f_autoFill.getHeight()) / 2);
-            f_autoFill.setResizable(false);
-            JPanel p_autoFill = new JPanel();
-            p_autoFill.setOpaque(false);
-            f_autoFill.add(p_autoFill);
-            p_autoFill.add(new JLabel("What percentage should be filled? "));
-            Object[] percentageOptions = {"Select", 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95};
-            final JComboBox cb_percent = new JComboBox(percentageOptions);
-            p_autoFill.add(cb_percent);
-            cb_percent.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (cb_percent.getSelectedIndex() > 0) {
-                        gameBoard.resetBoard();
-                        gameBoard.randomlyFillBoard((Integer) cb_percent.getSelectedItem());
-                        f_autoFill.dispose();
-                    }
-                }
-            });
-            f_autoFill.setVisible(true);
-        } else if (ae.getSource().equals(resetItem)) {
-            gameBoard.resetBoard();
-            gameBoard.repaint();
-        } else if (ae.getSource().equals(playItem)) {
-            setGameBeingPlayed(true);
-        } else if (ae.getSource().equals(stopItem)) {
-            setGameBeingPlayed(false);
-        } else if (ae.getSource().equals(sourceItem)) {
+    public void navigateToSource() {
+
             Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
             try {
                 desktop.browse(new URI("https://github.com/Burke9077/Conway-s-Game-of-Life"));
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(null, "Source is available on GitHub at:\nhttps://github.com/Burke9077/Conway-s-Game-of-Life", "Source", JOptionPane.INFORMATION_MESSAGE);
             }
-        } else if (ae.getSource().equals(aboutItem)) {
-            JOptionPane.showMessageDialog(null, "Conway's game of life was a cellular animation devised by the mathematician John Conway.\nThis Java, swing based implementation was created by Matthew Burke.\n\nhttp://burke9077.com\nBurke9077@gmail.com\n@burke9077\n\nCreative Commons Attribution 4.0 International");
-        }
+
+    }
+
+    private void showAboutBox() {
+        JOptionPane.showMessageDialog(null, "Conway's game of life was a cellular animation devised by the mathematician John Conway.\nThis Java, swing based implementation was created by Matthew Burke.\n\nhttp://burke9077.com\nBurke9077@gmail.com\n@burke9077\n\nCreative Commons Attribution 4.0 International");
+    }
+
+    private void autoFillCells() {
+        final JFrame f_autoFill = new JFrame();
+        f_autoFill.setTitle("Autofill");
+        f_autoFill.setSize(360, 60);
+        f_autoFill.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - f_autoFill.getWidth()) / 2,
+                (Toolkit.getDefaultToolkit().getScreenSize().height - f_autoFill.getHeight()) / 2);
+        f_autoFill.setResizable(false);
+        JPanel p_autoFill = new JPanel();
+        p_autoFill.setOpaque(false);
+        f_autoFill.add(p_autoFill);
+        p_autoFill.add(new JLabel("What percentage should be filled? "));
+        Object[] percentageOptions = {"Select", 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95};
+        final JComboBox cb_percent = new JComboBox(percentageOptions);
+        p_autoFill.add(cb_percent);
+        cb_percent.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (cb_percent.getSelectedIndex() > 0) {
+                    gameBoard.resetBoard();
+                    gameBoard.randomlyFillBoard((Integer) cb_percent.getSelectedItem());
+                    f_autoFill.dispose();
+                }
+            }
+        });
+        f_autoFill.setVisible(true);
+    }
+
+    private void changeNumberOfMoves() {
+        final JFrame f_options = new JFrame();
+        f_options.setTitle("Options");
+        f_options.setSize(300, 60);
+        f_options.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - f_options.getWidth()) / 2,
+                (Toolkit.getDefaultToolkit().getScreenSize().height - f_options.getHeight()) / 2);
+        f_options.setResizable(false);
+        JPanel p_options = new JPanel();
+        p_options.setOpaque(false);
+        f_options.add(p_options);
+        p_options.add(new JLabel("Number of moves per second:"));
+        Integer[] secondOptions = {1, 2, 3, 4, 5, 10, 15, 20};
+        final JComboBox cb_seconds = new JComboBox(secondOptions);
+        p_options.add(cb_seconds);
+        cb_seconds.setSelectedItem(i_movesPerSecond);
+        cb_seconds.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent ae) {
+                i_movesPerSecond = (Integer) cb_seconds.getSelectedItem();
+                f_options.dispose();
+            }
+        });
+        f_options.setVisible(true);
     }
 
     private class GameBoard extends JPanel implements ComponentListener, MouseListener, MouseMotionListener, Runnable {
