@@ -15,11 +15,11 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
     private static final Dimension MINIMUM_WINDOW_SIZE = new Dimension(400, 400);
     private static final int BLOCK_SIZE = 10;
 
-    private JMenuBar mb_menu;
-    private JMenu m_file, m_game, m_help;
-    private JMenuItem mi_file_options, mi_file_exit;
-    private JMenuItem mi_game_autofill, mi_game_play, mi_game_stop, mi_game_reset;
-    private JMenuItem mi_help_about, mi_help_source;
+    private JMenuBar menu;
+    private JMenu fileMenu, gameMenu, helpMenu;
+    private JMenuItem optionsItem, exitItem;
+    private JMenuItem autofillItem, playItem, stopItem, resetItem;
+    private JMenuItem aboutItem, sourceItem;
     private int i_movesPerSecond = 3;
     private GameBoard gb_gameBoard;
     private Thread game;
@@ -48,62 +48,71 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
     }
 
     private void SetupMenu() {
-        mb_menu = new JMenuBar();
-        setJMenuBar(mb_menu);
-        m_file = new JMenu("File");
-        mb_menu.add(m_file);
-        m_game = new JMenu("Game");
-        mb_menu.add(m_game);
-        m_help = new JMenu("Help");
-        mb_menu.add(m_help);
-        mi_file_options = new JMenuItem("Options");
-        mi_file_options.addActionListener(this);
-        mi_file_exit = new JMenuItem("Exit");
-        mi_file_exit.addActionListener(this);
-        m_file.add(mi_file_options);
-        m_file.add(new JSeparator());
-        m_file.add(mi_file_exit);
-        mi_game_autofill = new JMenuItem("Autofill");
-        mi_game_autofill.addActionListener(this);
-        mi_game_play = new JMenuItem("Play");
-        mi_game_play.addActionListener(this);
-        mi_game_stop = new JMenuItem("Stop");
-        mi_game_stop.setEnabled(false);
-        mi_game_stop.addActionListener(this);
-        mi_game_reset = new JMenuItem("Reset");
-        mi_game_reset.addActionListener(this);
-        m_game.add(mi_game_autofill);
-        m_game.add(new JSeparator());
-        m_game.add(mi_game_play);
-        m_game.add(mi_game_stop);
-        m_game.add(mi_game_reset);
-        mi_help_about = new JMenuItem("About");
-        mi_help_about.addActionListener(this);
-        mi_help_source = new JMenuItem("Source");
-        mi_help_source.addActionListener(this);
-        m_help.add(mi_help_about);
-        m_help.add(mi_help_source);
+        menu = new JMenuBar();
+        setJMenuBar(menu);
+        fileMenu = new JMenu("File");
+        menu.add(fileMenu);
+        gameMenu = new JMenu("Game");
+        menu.add(gameMenu);
+        helpMenu = new JMenu("Help");
+        menu.add(helpMenu);
+
+        optionsItem = new JMenuItem("Options");
+        optionsItem.addActionListener(this);
+
+        exitItem = new JMenuItem("Exit");
+        exitItem.addActionListener(this);
+
+        fileMenu.add(optionsItem);
+        fileMenu.add(new JSeparator());
+        fileMenu.add(exitItem);
+
+        autofillItem = new JMenuItem("Autofill");
+        autofillItem.addActionListener(this);
+
+        playItem = new JMenuItem("Play");
+        playItem.addActionListener(this);
+
+        stopItem = new JMenuItem("Stop");
+        stopItem.setEnabled(false);
+        stopItem.addActionListener(this);
+
+        resetItem = new JMenuItem("Reset");
+        resetItem.addActionListener(this);
+
+        gameMenu.add(autofillItem);
+        gameMenu.add(new JSeparator());
+        gameMenu.add(playItem);
+        gameMenu.add(stopItem);
+        gameMenu.add(resetItem);
+
+        aboutItem = new JMenuItem("About");
+        aboutItem.addActionListener(this);
+        sourceItem = new JMenuItem("Source");
+        sourceItem.addActionListener(this);
+        helpMenu.add(aboutItem);
+        helpMenu.add(sourceItem);
     }
 
     public void setGameBeingPlayed(boolean isBeingPlayed) {
         if (isBeingPlayed) {
-            mi_game_play.setEnabled(false);
-            mi_game_stop.setEnabled(true);
+            playItem.setEnabled(false);
+            stopItem.setEnabled(true);
             game = new Thread(gb_gameBoard);
             game.start();
         } else {
-            mi_game_play.setEnabled(true);
-            mi_game_stop.setEnabled(false);
+            playItem.setEnabled(true);
+            stopItem.setEnabled(false);
             game.interrupt();
         }
     }
 
     @Override
     public void actionPerformed(ActionEvent ae) {
-        if (ae.getSource().equals(mi_file_exit)) {
+        if (ae.getSource().equals(exitItem)) {
             // Exit the game
             System.exit(0);
-        } else if (ae.getSource().equals(mi_file_options)) {
+        } else if (ae.getSource().equals(optionsItem)) {
             // Put up an options panel to change the number of moves per second
             final JFrame f_options = new JFrame();
             f_options.setTitle("Options");
@@ -127,7 +136,7 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
                 }
             });
             f_options.setVisible(true);
-        } else if (ae.getSource().equals(mi_game_autofill)) {
+        } else if (ae.getSource().equals(autofillItem)) {
             final JFrame f_autoFill = new JFrame();
             f_autoFill.setTitle("Autofill");
             f_autoFill.setSize(360, 60);
@@ -152,21 +161,21 @@ public class ConwaysGameOfLife extends JFrame implements ActionListener {
                 }
             });
             f_autoFill.setVisible(true);
-        } else if (ae.getSource().equals(mi_game_reset)) {
+        } else if (ae.getSource().equals(resetItem)) {
             gb_gameBoard.resetBoard();
             gb_gameBoard.repaint();
-        } else if (ae.getSource().equals(mi_game_play)) {
+        } else if (ae.getSource().equals(playItem)) {
             setGameBeingPlayed(true);
-        } else if (ae.getSource().equals(mi_game_stop)) {
+        } else if (ae.getSource().equals(stopItem)) {
             setGameBeingPlayed(false);
-        } else if (ae.getSource().equals(mi_help_source)) {
+        } else if (ae.getSource().equals(sourceItem)) {
             Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
             try {
                 desktop.browse(new URI("https://github.com/Burke9077/Conway-s-Game-of-Life"));
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(null, "Source is available on GitHub at:\nhttps://github.com/Burke9077/Conway-s-Game-of-Life", "Source", JOptionPane.INFORMATION_MESSAGE);
             }
-        } else if (ae.getSource().equals(mi_help_about)) {
+        } else if (ae.getSource().equals(aboutItem)) {
             JOptionPane.showMessageDialog(null, "Conway's game of life was a cellular animation devised by the mathematician John Conway.\nThis Java, swing based implementation was created by Matthew Burke.\n\nhttp://burke9077.com\nBurke9077@gmail.com\n@burke9077\n\nCreative Commons Attribution 4.0 International");
         }
     }
