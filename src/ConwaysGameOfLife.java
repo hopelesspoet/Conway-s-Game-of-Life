@@ -46,6 +46,27 @@ public class ConwaysGameOfLife extends JFrame {
 
     private void SetupGameBoard() {
         gameBoard = new GameBoard();
+        gameBoard.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                super.componentResized(e);
+                gameBoard.resizeToWindowSize();
+            }
+        });
+        gameBoard.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                super.mouseReleased(e);
+                gameBoard.addPoint(e);
+            }
+        });
+        gameBoard.addMouseMotionListener(new MouseAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                super.mouseDragged(e);
+                gameBoard.addPoint(e);
+            }
+        });
         add(gameBoard);
     }
 
@@ -54,7 +75,7 @@ public class ConwaysGameOfLife extends JFrame {
             @Override
             public void keyReleased(KeyEvent e) {
                 super.keyReleased(e);
-                if(e.getKeyChar() == ' '){
+                if (e.getKeyChar() == ' ') {
                     isBeingPlayed = !isBeingPlayed;
                     setGameBeingPlayed(isBeingPlayed);
                 }
@@ -162,7 +183,7 @@ public class ConwaysGameOfLife extends JFrame {
         cb_percent.addActionListener(e -> {
             if (cb_percent.getSelectedIndex() > 0) {
                 gameBoard.resetBoard();
-                gameBoard.randomlyFillBoard((Integer) cb_percent.getSelectedItem());
+                gameBoard.randomlyFillBoard((int) cb_percent.getSelectedItem());
                 f_autoFill.dispose();
             }
         });
@@ -184,61 +205,52 @@ public class ConwaysGameOfLife extends JFrame {
         final JComboBox cb_seconds = new JComboBox(secondOptions);
         p_options.add(cb_seconds);
         cb_seconds.setSelectedItem(i_movesPerSecond);
-        cb_seconds.addActionListener(ae -> {
+        cb_seconds.addActionListener(ignored -> {
             i_movesPerSecond = (Integer) cb_seconds.getSelectedItem();
             f_options.dispose();
         });
         f_options.setVisible(true);
     }
 
-    private class GameBoard extends JPanel implements ComponentListener, MouseListener, MouseMotionListener, Runnable {
-        private Dimension d_gameBoardSize = null;
-        private ArrayList<Point> point = new ArrayList<Point>(0);
-
-        public GameBoard() {
-            // Add resizing listener
-            addComponentListener(this);
-            addMouseListener(this);
-            addMouseMotionListener(this);
-        }
+    private static class GameBoard extends JPanel implements Runnable {
+        private Dimension gameBoardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
+        private final Set<Point> points = new HashSet<>(0);
 
         private void updateArraySize() {
             ArrayList<Point> removeList = new ArrayList<>(0);
-            for (Point current : point) {
-                if ((current.x > d_gameBoardSize.width - 1) || (current.y > d_gameBoardSize.height - 1)) {
+            for (Point current : points) {
+                if ((current.x > gameBoardSize.width - 1) || (current.y > gameBoardSize.height - 1)) {
                     removeList.add(current);
                 }
             }
-            point.removeAll(removeList);
+            points.removeAll(removeList);
             repaint();
         }
 
         public void addPoint(int x, int y) {
-            if (!point.contains(new Point(x, y))) {
-                point.add(new Point(x, y));
-            }
+            points.add(new Point(x, y));
             repaint();
         }
 
         public void addPoint(MouseEvent me) {
             int x = me.getPoint().x / BLOCK_SIZE - 1;
             int y = me.getPoint().y / BLOCK_SIZE - 1;
-            if ((x >= 0) && (x < d_gameBoardSize.width) && (y >= 0) && (y < d_gameBoardSize.height)) {
+            if ((x >= 0) && (x < gameBoardSize.width) && (y >= 0) && (y < gameBoardSize.height)) {
                 addPoint(x, y);
             }
         }
 
         public void removePoint(int x, int y) {
-            point.remove(new Point(x, y));
+            points.remove(new Point(x, y));
         }
 
         public void resetBoard() {
-            point.clear();
+            points.clear();
         }
 
         public void randomlyFillBoard(int percent) {
-            for (int i = 0; i < d_gameBoardSize.width; i++) {
-                for (int j = 0; j < d_gameBoardSize.height; j++) {
+            for (int i = 0; i < gameBoardSize.width; i++) {
+                for (int j = 0; j < gameBoardSize.height; j++) {
                     if (Math.random() * 100 < percent) {
                         addPoint(i, j);
                     }
@@ -250,7 +262,7 @@ public class ConwaysGameOfLife extends JFrame {
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
             try {
-                for (Point newPoint : point) {
+                for (Point newPoint : points) {
                     // Draw new point
                     g.setColor(Color.blue);
                     g.fillRect(BLOCK_SIZE + (BLOCK_SIZE * newPoint.x), BLOCK_SIZE + (BLOCK_SIZE * newPoint.y), BLOCK_SIZE, BLOCK_SIZE);
@@ -259,69 +271,23 @@ public class ConwaysGameOfLife extends JFrame {
             }
             // Setup grid
             g.setColor(Color.BLACK);
-            for (int i = 0; i <= d_gameBoardSize.width; i++) {
-                g.drawLine(((i * BLOCK_SIZE) + BLOCK_SIZE), BLOCK_SIZE, (i * BLOCK_SIZE) + BLOCK_SIZE, BLOCK_SIZE + (BLOCK_SIZE * d_gameBoardSize.height));
+            for (int i = 0; i <= gameBoardSize.width; i++) {
+                g.drawLine(((i * BLOCK_SIZE) + BLOCK_SIZE), BLOCK_SIZE, (i * BLOCK_SIZE) + BLOCK_SIZE, BLOCK_SIZE + (BLOCK_SIZE * gameBoardSize.height));
             }
-            for (int i = 0; i <= d_gameBoardSize.height; i++) {
-                g.drawLine(BLOCK_SIZE, ((i * BLOCK_SIZE) + BLOCK_SIZE), BLOCK_SIZE * (d_gameBoardSize.width + 1), ((i * BLOCK_SIZE) + BLOCK_SIZE));
+            for (int i = 0; i <= gameBoardSize.height; i++) {
+                g.drawLine(BLOCK_SIZE, ((i * BLOCK_SIZE) + BLOCK_SIZE), BLOCK_SIZE * (gameBoardSize.width + 1), ((i * BLOCK_SIZE) + BLOCK_SIZE));
             }
         }
 
-        @Override
-        public void componentResized(ComponentEvent e) {
-            // Setup the game board size with proper boundries
-            d_gameBoardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
+        public void resizeToWindowSize() {
+            gameBoardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
             updateArraySize();
         }
 
         @Override
-        public void componentMoved(ComponentEvent e) {
-        }
-
-        @Override
-        public void componentShown(ComponentEvent e) {
-        }
-
-        @Override
-        public void componentHidden(ComponentEvent e) {
-        }
-
-        @Override
-        public void mouseClicked(MouseEvent e) {
-        }
-
-        @Override
-        public void mousePressed(MouseEvent e) {
-        }
-
-        @Override
-        public void mouseReleased(MouseEvent e) {
-            // Mouse was released (user clicked)
-            addPoint(e);
-        }
-
-        @Override
-        public void mouseEntered(MouseEvent e) {
-        }
-
-        @Override
-        public void mouseExited(MouseEvent e) {
-        }
-
-        @Override
-        public void mouseDragged(MouseEvent e) {
-            // Mouse is being dragged, user wants multiple selections
-            addPoint(e);
-        }
-
-        @Override
-        public void mouseMoved(MouseEvent e) {
-        }
-
-        @Override
         public void run() {
-            boolean[][] gameBoard = new boolean[d_gameBoardSize.width + 2][d_gameBoardSize.height + 2];
-            for (Point current : point) {
+            boolean[][] gameBoard = new boolean[gameBoardSize.width + 2][gameBoardSize.height + 2];
+            for (Point current : points) {
                 gameBoard[current.x + 1][current.y + 1] = true;
             }
             ArrayList<Point> survivingCells = new ArrayList<>(0);
@@ -367,7 +333,7 @@ public class ConwaysGameOfLife extends JFrame {
                 }
             }
             resetBoard();
-            point.addAll(survivingCells);
+            points.addAll(survivingCells);
             repaint();
             try {
                 Thread.sleep(1000 / i_movesPerSecond);
