@@ -3,6 +3,9 @@ import java.awt.event.*;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.swing.*;
 
@@ -78,6 +81,14 @@ public class ConwaysGameOfLife extends JFrame {
                 if (e.getKeyChar() == ' ') {
                     isBeingPlayed = !isBeingPlayed;
                     setGameBeingPlayed(isBeingPlayed);
+                }
+                if (e.getKeyCode() == KeyEvent.VK_KP_UP || e.getKeyCode() == KeyEvent.VK_UP) {
+                    gameBoard.i_movesPerSecond++;
+                }
+                if (e.getKeyCode() == KeyEvent.VK_KP_DOWN || e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    if (gameBoard.i_movesPerSecond >= 1) {
+                        gameBoard.i_movesPerSecond--;
+                    }
                 }
             }
         });
@@ -177,7 +188,7 @@ public class ConwaysGameOfLife extends JFrame {
         p_autoFill.setOpaque(false);
         f_autoFill.add(p_autoFill);
         p_autoFill.add(new JLabel("What percentage should be filled? "));
-        Integer[] percentageOptions = { 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95};
+        Integer[] percentageOptions = {5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95};
         final var cb_percent = new JComboBox<>(percentageOptions);
         p_autoFill.add(cb_percent);
         cb_percent.addActionListener(e -> {
@@ -215,6 +226,7 @@ public class ConwaysGameOfLife extends JFrame {
     private static class GameBoard extends JPanel implements Runnable {
         private Dimension gameBoardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
         private final Set<Point> points = new HashSet<>(0);
+        private int i_movesPerSecond = 1;
 
         private void updateArraySize() {
             ArrayList<Point> removeList = new ArrayList<>(0);
@@ -232,16 +244,37 @@ public class ConwaysGameOfLife extends JFrame {
             repaint();
         }
 
+        private Set<Integer[]> mousePoints = new HashSet();
+
         public void addPoint(MouseEvent me) {
+
             int x = me.getPoint().x / BLOCK_SIZE - 1;
             int y = me.getPoint().y / BLOCK_SIZE - 1;
-            if ((x >= 0) && (x < gameBoardSize.width) && (y >= 0) && (y < gameBoardSize.height)) {
-                addPoint(x, y);
+            mousePoints.add(new Integer[]{x, y});
+            if (me.getButton() != 0) {
+
+                for (Integer[] point : mousePoints) {
+                    x = point[0];
+                    y = point[1];
+                    if ((x >= 0) && (x < gameBoardSize.width) && (y >= 0) && (y < gameBoardSize.height)) {
+                        if (me.getButton() == MouseEvent.BUTTON1) {
+                            addPoint(x, y);
+                        }
+                        if (me.getButton() == MouseEvent.BUTTON3) {
+                            removePoint(x, y);
+                        }
+                    }
+                }
+                mousePoints.clear();
             }
+
+
         }
 
         public void removePoint(int x, int y) {
-            points.remove(new Point(x, y));
+            Set<Point> pointsToRemove = this.points.stream().filter(p -> p.x == x && p.y == y).collect(Collectors.toSet());
+            points.removeAll(pointsToRemove);
+            repaint();
         }
 
         public void resetBoard() {
