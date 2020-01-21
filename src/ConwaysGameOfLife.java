@@ -1,10 +1,13 @@
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
-
-import javax.swing.*;
+import java.util.Timer;
+import java.util.*;
+import java.util.function.BiPredicate;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Conway's game of life is a cellular automaton devised by the
@@ -13,145 +16,148 @@ import javax.swing.*;
 public class ConwaysGameOfLife extends JFrame {
     private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(800, 600);
     private static final Dimension MINIMUM_WINDOW_SIZE = new Dimension(400, 400);
-    private static final int BLOCK_SIZE = 10;
+    private static final int BLOCK_SIZE = 20;
+    private static final GameBoard gameboard = new GameBoard();
+
     private boolean isBeingPlayed = false;
+    private int movesPerSecond = 200;
+    private TimerTask task;
+    private final Timer timer = new Timer("Stepper");
 
     private JMenuItem playItem;
     private JMenuItem stopItem;
-    private int i_movesPerSecond = 3;
-    private GameBoard gameBoard;
-    private Thread game;
 
     public static void main(String[] args) {
-        // Setup the swing specifics
-        JFrame game = new ConwaysGameOfLife();
+        final var game = new ConwaysGameOfLife();
         setupFrame(game);
     }
 
     private static void setupFrame(JFrame game) {
+        final var screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+
         game.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         game.setTitle("Conway's Game of Life");
         game.setIconImage(new ImageIcon(ConwaysGameOfLife.class.getResource("/images/logo.png")).getImage());
         game.setSize(DEFAULT_WINDOW_SIZE);
         game.setMinimumSize(MINIMUM_WINDOW_SIZE);
-        game.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - game.getWidth()) / 2,
-                (Toolkit.getDefaultToolkit().getScreenSize().height - game.getHeight()) / 2);
+        game.setLocation((screenSize.width - game.getWidth()) / 2, (screenSize.height - game.getHeight()) / 2);
         game.setVisible(true);
     }
 
     public ConwaysGameOfLife() {
-        SetupMenu();
-        SetupGameBoard();
+        setupMenu();
+        setupGameboard();
     }
 
-    private void SetupGameBoard() {
-        gameBoard = new GameBoard();
-        gameBoard.addComponentListener(new ComponentAdapter() {
+    private void setupGameboard() {
+        gameboard.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
                 super.componentResized(e);
-                gameBoard.resizeToWindowSize();
+                gameboard.resizeToWindowSize();
             }
         });
-        gameBoard.addMouseListener(new MouseAdapter() {
+        gameboard.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseReleased(MouseEvent e) {
                 super.mouseReleased(e);
-                gameBoard.addPoint(e);
+                gameboard.addPoint(e.getPoint());
             }
         });
-        gameBoard.addMouseMotionListener(new MouseAdapter() {
+        gameboard.addMouseMotionListener(new MouseAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
                 super.mouseDragged(e);
-                gameBoard.addPoint(e);
+                gameboard.addPoint(e.getPoint());
             }
         });
-        add(gameBoard);
+        add(gameboard);
     }
 
-    private void SetupMenu() {
-        this.addKeyListener(new KeyAdapter() {
+    private void setupMenu() {
+        addKeyListener(new KeyAdapter() {
             @Override
-            public void keyReleased(KeyEvent e) {
-                super.keyReleased(e);
-                if (e.getKeyChar() == ' ') {
+            public void keyReleased(KeyEvent event) {
+                super.keyReleased(event);
+                if (event.getKeyChar() == ' ') {
                     isBeingPlayed = !isBeingPlayed;
                     setGameBeingPlayed(isBeingPlayed);
                 }
             }
         });
-        JMenuBar menu = new JMenuBar();
-        setJMenuBar(menu);
-        JMenu fileMenu = new JMenu("File");
-        menu.add(fileMenu);
-        JMenu gameMenu = new JMenu("Game");
-        menu.add(gameMenu);
-        JMenu helpMenu = new JMenu("Help");
-        menu.add(helpMenu);
+        final var menu = new JMenuBar();
 
-        JMenuItem optionsItem = new JMenuItem("Options");
+        final var fileMenu = new JMenu("File");
+        final var gameMenu = new JMenu("Game");
+        final var helpMenu = new JMenu("Help");
+
+        final var optionsItem = new JMenuItem("Options");
         optionsItem.addActionListener(event -> changeNumberOfMoves());
 
-        JMenuItem exitItem = new JMenuItem("Exit");
+        final var exitItem = new JMenuItem("Exit");
         exitItem.addActionListener(event -> System.exit(0));
 
         fileMenu.add(optionsItem);
         fileMenu.add(new JSeparator());
         fileMenu.add(exitItem);
 
-        JMenuItem autofillItem = new JMenuItem("Autofill");
-        autofillItem.addActionListener(event -> autoFillCells());
+        final var autofillItem = new JMenuItem("Autofill");
+        autofillItem.addActionListener(ignored -> autoFillCells());
 
         playItem = new JMenuItem("Play");
         playItem.addActionListener(event -> setGameBeingPlayed(true));
 
         stopItem = new JMenuItem("Stop");
         stopItem.setEnabled(false);
-        stopItem.addActionListener(event -> setGameBeingPlayed(false));
+        stopItem.addActionListener(ignored -> setGameBeingPlayed(false));
 
-        JMenuItem resetItem = new JMenuItem("Reset");
+        final var resetItem = new JMenuItem("Reset");
         resetItem.addActionListener(event -> {
-            gameBoard.resetBoard();
-            gameBoard.repaint();
+            gameboard.resetBoard();
+            gameboard.repaint();
         });
 
-        gameMenu.add(autofillItem);
-        gameMenu.add(new JSeparator());
-        gameMenu.add(playItem);
-        gameMenu.add(stopItem);
-        gameMenu.add(resetItem);
+        Stream.of(autofillItem, new JSeparator(), playItem, stopItem, resetItem).forEach(gameMenu::add);
 
-        JMenuItem aboutItem = new JMenuItem("About");
+        final var aboutItem = new JMenuItem("About");
         aboutItem.addActionListener(event -> showAboutBox());
-        JMenuItem sourceItem = new JMenuItem("Source");
+
+        final var sourceItem = new JMenuItem("Source");
         sourceItem.addActionListener(event -> navigateToSource());
-        helpMenu.add(aboutItem);
-        helpMenu.add(sourceItem);
+
+        Stream.of(aboutItem, sourceItem).forEach(helpMenu::add);
+        Stream.of(fileMenu, gameMenu, helpMenu).forEach(menu::add);
+
+        setJMenuBar(menu);
     }
 
     public void setGameBeingPlayed(boolean isBeingPlayed) {
         if (isBeingPlayed) {
             playItem.setEnabled(false);
             stopItem.setEnabled(true);
-            game = new Thread(gameBoard);
-            game.start();
+            task = new TimerTask() {
+                @Override
+                public void run() {
+                    gameboard.run();
+                }
+            };
+            timer.schedule(task, 0, 1000 / movesPerSecond);
         } else {
             playItem.setEnabled(true);
             stopItem.setEnabled(false);
-            game.interrupt();
+            task.cancel();
         }
     }
 
     public void navigateToSource() {
-
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+
         try {
             desktop.browse(new URI("https://github.com/Burke9077/Conway-s-Game-of-Life"));
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(null, "Source is available on GitHub at:\nhttps://github.com/Burke9077/Conway-s-Game-of-Life", "Source", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Source is available on GitHub at:\nhttps://github.com/Burke9077/Conway-s-Game-of-Life",
+                    "Source", JOptionPane.INFORMATION_MESSAGE);
         }
-
     }
 
     private void showAboutBox() {
@@ -167,81 +173,84 @@ public class ConwaysGameOfLife extends JFrame {
     }
 
     private void autoFillCells() {
-        final JFrame f_autoFill = new JFrame();
-        f_autoFill.setTitle("Autofill");
-        f_autoFill.setSize(360, 60);
-        f_autoFill.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - f_autoFill.getWidth()) / 2,
-                (Toolkit.getDefaultToolkit().getScreenSize().height - f_autoFill.getHeight()) / 2);
-        f_autoFill.setResizable(false);
-        JPanel p_autoFill = new JPanel();
-        p_autoFill.setOpaque(false);
-        f_autoFill.add(p_autoFill);
-        p_autoFill.add(new JLabel("What percentage should be filled? "));
-        Integer[] percentageOptions = { 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95};
-        final var cb_percent = new JComboBox<>(percentageOptions);
-        p_autoFill.add(cb_percent);
-        cb_percent.addActionListener(e -> {
-            if (cb_percent.getSelectedIndex() > 0) {
-                gameBoard.resetBoard();
-                gameBoard.randomlyFillBoard((int) cb_percent.getSelectedItem());
-                f_autoFill.dispose();
+        final var screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+
+        final var autoFillFrame = new JFrame();
+        autoFillFrame.setTitle("Autofill");
+        autoFillFrame.setSize(360, 60);
+        autoFillFrame.setLocation((screenSize.width - autoFillFrame.getWidth()) / 2,
+                (screenSize.height - autoFillFrame.getHeight()) / 2);
+        autoFillFrame.setResizable(false);
+
+        final var autoFillPanel = new JPanel();
+        autoFillPanel.setOpaque(false);
+
+        final var percentageOptions = new JComboBox<>(new Integer[]{5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95});
+        percentageOptions.addActionListener(e -> {
+            if (percentageOptions.getSelectedIndex() > 0) {
+                gameboard.resetBoard();
+                gameboard.randomlyFillBoard((int) percentageOptions.getSelectedItem());
+                autoFillFrame.dispose();
             }
         });
-        f_autoFill.setVisible(true);
+
+        autoFillFrame.add(autoFillPanel);
+        autoFillPanel.add(new JLabel("What percentage should be filled? "));
+        autoFillPanel.add(percentageOptions);
+
+        autoFillFrame.setVisible(true);
     }
 
     private void changeNumberOfMoves() {
-        final JFrame f_options = new JFrame();
-        f_options.setTitle("Options");
-        f_options.setSize(300, 60);
-        f_options.setLocation((Toolkit.getDefaultToolkit().getScreenSize().width - f_options.getWidth()) / 2,
-                (Toolkit.getDefaultToolkit().getScreenSize().height - f_options.getHeight()) / 2);
-        f_options.setResizable(false);
-        JPanel p_options = new JPanel();
-        p_options.setOpaque(false);
-        f_options.add(p_options);
-        p_options.add(new JLabel("Number of moves per second:"));
-        Integer[] secondOptions = {1, 2, 3, 4, 5, 10, 15, 20};
-        final JComboBox cb_seconds = new JComboBox(secondOptions);
-        p_options.add(cb_seconds);
-        cb_seconds.setSelectedItem(i_movesPerSecond);
-        cb_seconds.addActionListener(ignored -> {
-            i_movesPerSecond = (Integer) cb_seconds.getSelectedItem();
-            f_options.dispose();
+        final var screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+
+        final var optionsScreen = new JFrame();
+        optionsScreen.setTitle("Options");
+        optionsScreen.setSize(300, 60);
+
+        optionsScreen.setLocation((screenSize.width - optionsScreen.getWidth()) / 2,
+                (screenSize.height - optionsScreen.getHeight()) / 2);
+        optionsScreen.setResizable(true);
+
+        final var optionsPanel = new JPanel();
+        optionsPanel.setOpaque(false);
+
+        final var generationsPerSecondOptions = new JComboBox<>(new Integer[]{1, 2, 3, 4, 5, 10, 15, 20});
+        generationsPerSecondOptions.setSelectedItem(movesPerSecond);
+        generationsPerSecondOptions.addActionListener(ignored -> {
+            movesPerSecond = generationsPerSecondOptions.getItemAt(generationsPerSecondOptions.getSelectedIndex());
+            optionsScreen.dispose();
         });
-        f_options.setVisible(true);
+
+        optionsPanel.add(new JLabel("Number of generations per second:"));
+        optionsPanel.add(generationsPerSecondOptions);
+        optionsScreen.add(optionsPanel);
+
+        optionsScreen.setVisible(true);
     }
 
     private static class GameBoard extends JPanel implements Runnable {
-        private Dimension gameBoardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
-        private final Set<Point> points = new HashSet<>(0);
-
-        private void updateArraySize() {
-            ArrayList<Point> removeList = new ArrayList<>(0);
-            for (Point current : points) {
-                if ((current.x > gameBoardSize.width - 1) || (current.y > gameBoardSize.height - 1)) {
-                    removeList.add(current);
-                }
-            }
-            points.removeAll(removeList);
-            repaint();
-        }
+        private static final Predicate<Integer> doesCellSurvive = surrounding -> (surrounding == 2) || (surrounding == 3);
+        private static final Predicate<Integer> isCellBorn = surrounding -> surrounding == 2 || (surrounding == 3);
+        private static final BiPredicate<Point, Dimension> isOutsideViewPort = (point, dimension) -> (point.x > dimension.width - 1) || point.y > dimension.height - 1;
+        private static final Set<Point> points = new HashSet<>(0);
+        private Dimension gameboardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
 
         public void addPoint(int x, int y) {
             points.add(new Point(x, y));
             repaint();
         }
 
-        public void addPoint(MouseEvent me) {
-            int x = me.getPoint().x / BLOCK_SIZE - 1;
-            int y = me.getPoint().y / BLOCK_SIZE - 1;
-            if ((x >= 0) && (x < gameBoardSize.width) && (y >= 0) && (y < gameBoardSize.height)) {
+        public void addPoint(Point point) {
+            int x = point.x / BLOCK_SIZE - 1;
+            int y = point.y / BLOCK_SIZE - 1;
+            if (isOutsideViewPort.negate().test(new Point(x, y), gameboardSize)) {
                 addPoint(x, y);
             }
         }
 
-        public void removePoint(int x, int y) {
-            points.remove(new Point(x, y));
+        public void removePoint(Point point) {
+            points.remove(point);
         }
 
         public void resetBoard() {
@@ -249,8 +258,8 @@ public class ConwaysGameOfLife extends JFrame {
         }
 
         public void randomlyFillBoard(int percent) {
-            for (int i = 0; i < gameBoardSize.width; i++) {
-                for (int j = 0; j < gameBoardSize.height; j++) {
+            for (int i = 0; i < gameboardSize.width; i++) {
+                for (int j = 0; j < gameboardSize.height; j++) {
                     if (Math.random() * 100 < percent) {
                         addPoint(i, j);
                     }
@@ -261,72 +270,72 @@ public class ConwaysGameOfLife extends JFrame {
         @Override
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
+            g.setColor(Color.blue);
+
             try {
-                for (Point newPoint : points) {
-                    // Draw new point
-                    g.setColor(Color.blue);
-                    g.fillRect(BLOCK_SIZE + (BLOCK_SIZE * newPoint.x), BLOCK_SIZE + (BLOCK_SIZE * newPoint.y), BLOCK_SIZE, BLOCK_SIZE);
-                }
+                points.forEach(newPoint -> drawScaledPoint(g, newPoint));
             } catch (ConcurrentModificationException ignored) {
             }
-            // Setup grid
+
+            setupGrid(g);
+        }
+
+        private void drawScaledPoint(Graphics g, Point newPoint) {
+            g.fillRect(BLOCK_SIZE + (BLOCK_SIZE * newPoint.x),
+                    BLOCK_SIZE + (BLOCK_SIZE * newPoint.y), BLOCK_SIZE, BLOCK_SIZE);
+        }
+
+        private void setupGrid(Graphics g) {
             g.setColor(Color.BLACK);
-            for (int i = 0; i <= gameBoardSize.width; i++) {
-                g.drawLine(((i * BLOCK_SIZE) + BLOCK_SIZE), BLOCK_SIZE, (i * BLOCK_SIZE) + BLOCK_SIZE, BLOCK_SIZE + (BLOCK_SIZE * gameBoardSize.height));
+
+            for (int i = 0; i <= gameboardSize.width; i++) {
+                drawScaledHorizontalLine(g, i);
             }
-            for (int i = 0; i <= gameBoardSize.height; i++) {
-                g.drawLine(BLOCK_SIZE, ((i * BLOCK_SIZE) + BLOCK_SIZE), BLOCK_SIZE * (gameBoardSize.width + 1), ((i * BLOCK_SIZE) + BLOCK_SIZE));
+
+            for (int i = 0; i <= gameboardSize.height; i++) {
+                drawVerticalLine(g, i);
             }
         }
 
+        private void drawVerticalLine(Graphics g, int i) {
+            g.drawLine(BLOCK_SIZE, ((i * BLOCK_SIZE) + BLOCK_SIZE),
+                    BLOCK_SIZE * (gameboardSize.width + 1), ((i * BLOCK_SIZE) + BLOCK_SIZE));
+        }
+
+        private void drawScaledHorizontalLine(Graphics g, int i) {
+            g.drawLine(((i * BLOCK_SIZE) + BLOCK_SIZE), BLOCK_SIZE,
+                    (i * BLOCK_SIZE) + BLOCK_SIZE, BLOCK_SIZE + (BLOCK_SIZE * gameboardSize.height));
+        }
+
         public void resizeToWindowSize() {
-            gameBoardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
-            updateArraySize();
+            gameboardSize = new Dimension(getWidth() / BLOCK_SIZE - 2,
+                    getHeight() / BLOCK_SIZE - 2);
+
+            points.removeAll(points.stream()
+                    .filter(point -> isOutsideViewPort.test(point, gameboardSize))
+                    .collect(Collectors.toSet()));
+
+            repaint();
         }
 
         @Override
         public void run() {
-            boolean[][] gameBoard = new boolean[gameBoardSize.width + 2][gameBoardSize.height + 2];
-            for (Point current : points) {
-                gameBoard[current.x + 1][current.y + 1] = true;
-            }
-            ArrayList<Point> survivingCells = new ArrayList<>(0);
-            // Iterate through the array, follow game of life rules
+            final var gameBoard = new boolean[gameboardSize.width + 2][gameboardSize.height + 2];
+            final var survivingCells = new ArrayList<Point>(points.size());
+
+            points.forEach(point -> gameBoard[point.x + 1][point.y + 1] = true);
+
             for (int i = 1; i < gameBoard.length - 1; i++) {
                 for (int j = 1; j < gameBoard[0].length - 1; j++) {
-                    int surrounding = 0;
-                    if (gameBoard[i - 1][j - 1]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i - 1][j]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i - 1][j + 1]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i][j - 1]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i][j + 1]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i + 1][j - 1]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i + 1][j]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i + 1][j + 1]) {
-                        surrounding++;
-                    }
-                    if (gameBoard[i][j]) {
-                        // Cell is alive, Can the cell live? (2-3)
-                        if ((surrounding == 2) || (surrounding == 3)) {
+                    final var surrounding = getSurrounding(gameBoard, i, j);
+                    final var cellIsAlive = gameBoard[i][j];
+
+                    if (cellIsAlive) {
+                        if (doesCellSurvive.test(surrounding)) {
                             survivingCells.add(new Point(i - 1, j - 1));
                         }
                     } else {
-                        // Cell is dead, will the cell be given birth? (3)
-                        if (surrounding == 3) {
+                        if (isCellBorn.test(surrounding)) {
                             survivingCells.add(new Point(i - 1, j - 1));
                         }
                     }
@@ -335,11 +344,37 @@ public class ConwaysGameOfLife extends JFrame {
             resetBoard();
             points.addAll(survivingCells);
             repaint();
-            try {
-                Thread.sleep(1000 / i_movesPerSecond);
-                run();
-            } catch (InterruptedException ex) {
+        }
+
+        private int getSurrounding(boolean[][] gameBoard, int i, int j) {
+            int surrounding = 0;
+
+            if (gameBoard[i - 1][j - 1]) {
+                surrounding++;
             }
+            if (gameBoard[i - 1][j]) {
+                surrounding++;
+            }
+            if (gameBoard[i - 1][j + 1]) {
+                surrounding++;
+            }
+            if (gameBoard[i][j - 1]) {
+                surrounding++;
+            }
+            if (gameBoard[i][j + 1]) {
+                surrounding++;
+            }
+            if (gameBoard[i + 1][j - 1]) {
+                surrounding++;
+            }
+            if (gameBoard[i + 1][j]) {
+                surrounding++;
+            }
+            if (gameBoard[i + 1][j + 1]) {
+                surrounding++;
+            }
+
+            return surrounding;
         }
     }
 }
