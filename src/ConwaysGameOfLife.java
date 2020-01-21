@@ -8,6 +8,13 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.swing.*;
 
 /**
  * Conway's game of life is a cellular automaton devised by the
@@ -82,6 +89,14 @@ public class ConwaysGameOfLife extends JFrame {
                 if (event.getKeyChar() == ' ') {
                     isBeingPlayed = !isBeingPlayed;
                     setGameBeingPlayed(isBeingPlayed);
+                }
+                if (e.getKeyCode() == KeyEvent.VK_KP_UP || e.getKeyCode() == KeyEvent.VK_UP) {
+                    gameboard.i_movesPerSecond++;
+                }
+                if (e.getKeyCode() == KeyEvent.VK_KP_DOWN || e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    if (gameboard.i_movesPerSecond >= 1) {
+                        gameboard.i_movesPerSecond--;
+                    }
                 }
             }
         });
@@ -235,7 +250,7 @@ public class ConwaysGameOfLife extends JFrame {
         private static final BiPredicate<Point, Dimension> isOutsideViewPort = (point, dimension) -> (point.x > dimension.width - 1) || point.y > dimension.height - 1;
         private static final Set<Point> points = new HashSet<>(0);
         private Dimension gameboardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
-
+        private int i_movesPerSecond = 1;
         public void addPoint(int x, int y) {
             points.add(new Point(x, y));
             repaint();
