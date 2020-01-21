@@ -27,9 +27,9 @@ public class ConwaysGameOfLife extends JFrame {
     private static final GameBoard gameboard = new GameBoard();
 
     private boolean isBeingPlayed = false;
-    private int movesPerSecond = 200;
+    private int movesPerSecond = 1;
     private TimerTask task;
-    private final Timer timer = new Timer("Stepper");
+    private Timer timer = new Timer("Stepper");
 
     private JMenuItem playItem;
     private JMenuItem stopItem;
@@ -90,12 +90,14 @@ public class ConwaysGameOfLife extends JFrame {
                     isBeingPlayed = !isBeingPlayed;
                     setGameBeingPlayed(isBeingPlayed);
                 }
-                if (e.getKeyCode() == KeyEvent.VK_KP_UP || e.getKeyCode() == KeyEvent.VK_UP) {
-                    gameboard.i_movesPerSecond++;
+                if (event.getKeyCode() == KeyEvent.VK_KP_UP || event.getKeyCode() == KeyEvent.VK_UP || event.getKeyChar() == 'w') {
+                    movesPerSecond++;
+                    reschedule();
                 }
-                if (e.getKeyCode() == KeyEvent.VK_KP_DOWN || e.getKeyCode() == KeyEvent.VK_DOWN) {
-                    if (gameboard.i_movesPerSecond >= 1) {
-                        gameboard.i_movesPerSecond--;
+                if (event.getKeyCode() == KeyEvent.VK_KP_DOWN || event.getKeyCode() == KeyEvent.VK_DOWN || event.getKeyChar() == 's') {
+                    if (movesPerSecond != 1) {
+                        movesPerSecond--;
+                        reschedule();
                     }
                 }
             }
@@ -150,18 +152,28 @@ public class ConwaysGameOfLife extends JFrame {
         if (isBeingPlayed) {
             playItem.setEnabled(false);
             stopItem.setEnabled(true);
-            task = new TimerTask() {
-                @Override
-                public void run() {
-                    gameboard.run();
-                }
-            };
-            timer.schedule(task, 0, 1000 / movesPerSecond);
+            reschedule();
         } else {
             playItem.setEnabled(true);
             stopItem.setEnabled(false);
             task.cancel();
         }
+    }
+
+    private TimerTask getTask() {
+        return new TimerTask() {
+            @Override
+            public void run() {
+                gameboard.run();
+            }
+        };
+    }
+
+    private void reschedule() {
+        task.cancel();
+        task = getTask();
+        System.out.println(movesPerSecond);
+        timer.schedule(task, 0, 1000 / movesPerSecond);
     }
 
     public void navigateToSource() {
@@ -234,6 +246,7 @@ public class ConwaysGameOfLife extends JFrame {
         generationsPerSecondOptions.setSelectedItem(movesPerSecond);
         generationsPerSecondOptions.addActionListener(ignored -> {
             movesPerSecond = generationsPerSecondOptions.getItemAt(generationsPerSecondOptions.getSelectedIndex());
+            timer = new Timer("Stepper");
             optionsScreen.dispose();
         });
 
@@ -250,7 +263,6 @@ public class ConwaysGameOfLife extends JFrame {
         private static final BiPredicate<Point, Dimension> isOutsideViewPort = (point, dimension) -> (point.x > dimension.width - 1) || point.y > dimension.height - 1;
         private static final Set<Point> points = new HashSet<>(0);
         private Dimension gameboardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
-        private int i_movesPerSecond = 1;
         public void addPoint(int x, int y) {
             points.add(new Point(x, y));
             repaint();
