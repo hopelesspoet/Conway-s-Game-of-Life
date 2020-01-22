@@ -9,12 +9,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
-
-import javax.swing.*;
 
 /**
  * Conway's game of life is a cellular automaton devised by the
@@ -24,10 +20,10 @@ public class ConwaysGameOfLife extends JFrame {
     private static final Dimension DEFAULT_WINDOW_SIZE = new Dimension(800, 600);
     private static final Dimension MINIMUM_WINDOW_SIZE = new Dimension(400, 400);
     private static final int BLOCK_SIZE = 20;
-    private static final GameBoard gameboard = new GameBoard();
+    private static final Gameboard gameboard = new Gameboard();
 
     private boolean isBeingPlayed = false;
-    private int movesPerSecond = 1;
+    private int generationsPerSecond = 1;
     private TimerTask task;
     private Timer timer = new Timer("Stepper");
 
@@ -37,6 +33,11 @@ public class ConwaysGameOfLife extends JFrame {
     public static void main(String[] args) {
         final var game = new ConwaysGameOfLife();
         setupFrame(game);
+    }
+
+    public ConwaysGameOfLife() {
+        setupMenu();
+        setupGameboard();
     }
 
     private static void setupFrame(JFrame game) {
@@ -51,9 +52,71 @@ public class ConwaysGameOfLife extends JFrame {
         game.setVisible(true);
     }
 
-    public ConwaysGameOfLife() {
-        setupMenu();
-        setupGameboard();
+    private void setupMenu() {
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent event) {
+                super.keyReleased(event);
+                if (event.getKeyChar() == ' ') {
+                    isBeingPlayed = !isBeingPlayed;
+                    setGameBeingPlayed(isBeingPlayed);
+                }
+                if (event.getKeyCode() == KeyEvent.VK_KP_UP || event.getKeyCode() == KeyEvent.VK_UP || event.getKeyChar() == 'w') {
+                    generationsPerSecond++;
+                    reschedule();
+                }
+                if (event.getKeyCode() == KeyEvent.VK_KP_DOWN || event.getKeyCode() == KeyEvent.VK_DOWN || event.getKeyChar() == 's') {
+                    if (generationsPerSecond != 1) {
+                        generationsPerSecond--;
+                        reschedule();
+                    }
+                }
+            }
+        });
+        final var menu = new JMenuBar();
+
+        final var fileMenu = new JMenu("File");
+        final var gameMenu = new JMenu("Game");
+        final var helpMenu = new JMenu("Help");
+
+        final var optionsItem = new JMenuItem("Options");
+        optionsItem.addActionListener(event -> changeNumberOfMoves());
+
+        final var exitItem = new JMenuItem("Exit");
+        exitItem.addActionListener(ignored -> System.exit(0));
+
+        fileMenu.add(optionsItem);
+        fileMenu.add(new JSeparator());
+        fileMenu.add(exitItem);
+
+        final var autofillItem = new JMenuItem("Autofill");
+        autofillItem.addActionListener(ignored -> autoFillCells());
+
+        playItem = new JMenuItem("Play");
+        playItem.addActionListener(ignored -> setGameBeingPlayed(true));
+
+        stopItem = new JMenuItem("Stop");
+        stopItem.setEnabled(false);
+        stopItem.addActionListener(ignored -> setGameBeingPlayed(false));
+
+        final var resetItem = new JMenuItem("Reset");
+        resetItem.addActionListener(ignored -> {
+            gameboard.resetBoard();
+            gameboard.repaint();
+        });
+
+        Stream.of(autofillItem, new JSeparator(), playItem, stopItem, resetItem).forEach(gameMenu::add);
+
+        final var aboutItem = new JMenuItem("About");
+        aboutItem.addActionListener(event -> showAboutBox());
+
+        final var sourceItem = new JMenuItem("Source");
+        sourceItem.addActionListener(event -> navigateToSource());
+
+        Stream.of(aboutItem, sourceItem).forEach(helpMenu::add);
+        Stream.of(fileMenu, gameMenu, helpMenu).forEach(menu::add);
+
+        setJMenuBar(menu);
     }
 
     private void setupGameboard() {
@@ -81,83 +144,25 @@ public class ConwaysGameOfLife extends JFrame {
         add(gameboard);
     }
 
-    private void setupMenu() {
-        addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent event) {
-                super.keyReleased(event);
-                if (event.getKeyChar() == ' ') {
-                    isBeingPlayed = !isBeingPlayed;
-                    setGameBeingPlayed(isBeingPlayed);
-                }
-                if (event.getKeyCode() == KeyEvent.VK_KP_UP || event.getKeyCode() == KeyEvent.VK_UP || event.getKeyChar() == 'w') {
-                    movesPerSecond++;
-                    reschedule();
-                }
-                if (event.getKeyCode() == KeyEvent.VK_KP_DOWN || event.getKeyCode() == KeyEvent.VK_DOWN || event.getKeyChar() == 's') {
-                    if (movesPerSecond != 1) {
-                        movesPerSecond--;
-                        reschedule();
-                    }
-                }
-            }
-        });
-        final var menu = new JMenuBar();
-
-        final var fileMenu = new JMenu("File");
-        final var gameMenu = new JMenu("Game");
-        final var helpMenu = new JMenu("Help");
-
-        final var optionsItem = new JMenuItem("Options");
-        optionsItem.addActionListener(event -> changeNumberOfMoves());
-
-        final var exitItem = new JMenuItem("Exit");
-        exitItem.addActionListener(event -> System.exit(0));
-
-        fileMenu.add(optionsItem);
-        fileMenu.add(new JSeparator());
-        fileMenu.add(exitItem);
-
-        final var autofillItem = new JMenuItem("Autofill");
-        autofillItem.addActionListener(ignored -> autoFillCells());
-
-        playItem = new JMenuItem("Play");
-        playItem.addActionListener(event -> setGameBeingPlayed(true));
-
-        stopItem = new JMenuItem("Stop");
-        stopItem.setEnabled(false);
-        stopItem.addActionListener(ignored -> setGameBeingPlayed(false));
-
-        final var resetItem = new JMenuItem("Reset");
-        resetItem.addActionListener(event -> {
-            gameboard.resetBoard();
-            gameboard.repaint();
-        });
-
-        Stream.of(autofillItem, new JSeparator(), playItem, stopItem, resetItem).forEach(gameMenu::add);
-
-        final var aboutItem = new JMenuItem("About");
-        aboutItem.addActionListener(event -> showAboutBox());
-
-        final var sourceItem = new JMenuItem("Source");
-        sourceItem.addActionListener(event -> navigateToSource());
-
-        Stream.of(aboutItem, sourceItem).forEach(helpMenu::add);
-        Stream.of(fileMenu, gameMenu, helpMenu).forEach(menu::add);
-
-        setJMenuBar(menu);
-    }
-
     public void setGameBeingPlayed(boolean isBeingPlayed) {
         if (isBeingPlayed) {
             playItem.setEnabled(false);
             stopItem.setEnabled(true);
+            task = getTask();
             reschedule();
         } else {
             playItem.setEnabled(true);
             stopItem.setEnabled(false);
             task.cancel();
         }
+    }
+
+
+    private void reschedule() {
+        task.cancel();
+        task = getTask();
+        System.out.println(generationsPerSecond);
+        timer.schedule(task, 0, 1000 / generationsPerSecond);
     }
 
     private TimerTask getTask() {
@@ -168,14 +173,6 @@ public class ConwaysGameOfLife extends JFrame {
             }
         };
     }
-
-    private void reschedule() {
-        task.cancel();
-        task = getTask();
-        System.out.println(movesPerSecond);
-        timer.schedule(task, 0, 1000 / movesPerSecond);
-    }
-
     public void navigateToSource() {
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
 
@@ -213,7 +210,7 @@ public class ConwaysGameOfLife extends JFrame {
         autoFillPanel.setOpaque(false);
 
         final var percentageOptions = new JComboBox<>(new Integer[]{5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95});
-        percentageOptions.addActionListener(e -> {
+        percentageOptions.addActionListener(ignored -> {
             if (percentageOptions.getSelectedIndex() > 0) {
                 gameboard.resetBoard();
                 gameboard.randomlyFillBoard((int) percentageOptions.getSelectedItem());
@@ -243,10 +240,9 @@ public class ConwaysGameOfLife extends JFrame {
         optionsPanel.setOpaque(false);
 
         final var generationsPerSecondOptions = new JComboBox<>(new Integer[]{1, 2, 3, 4, 5, 10, 15, 20});
-        generationsPerSecondOptions.setSelectedItem(movesPerSecond);
+        generationsPerSecondOptions.setSelectedItem(generationsPerSecond);
         generationsPerSecondOptions.addActionListener(ignored -> {
-            movesPerSecond = generationsPerSecondOptions.getItemAt(generationsPerSecondOptions.getSelectedIndex());
-            timer = new Timer("Stepper");
+            generationsPerSecond = generationsPerSecondOptions.getItemAt(generationsPerSecondOptions.getSelectedIndex());
             optionsScreen.dispose();
         });
 
@@ -257,12 +253,13 @@ public class ConwaysGameOfLife extends JFrame {
         optionsScreen.setVisible(true);
     }
 
-    private static class GameBoard extends JPanel implements Runnable {
+    private static class Gameboard extends JPanel implements Runnable {
         private static final Predicate<Integer> doesCellSurvive = surrounding -> (surrounding == 2) || (surrounding == 3);
         private static final Predicate<Integer> isCellBorn = surrounding -> surrounding == 2 || (surrounding == 3);
         private static final BiPredicate<Point, Dimension> isOutsideViewPort = (point, dimension) -> (point.x > dimension.width - 1) || point.y > dimension.height - 1;
         private static final Set<Point> points = new HashSet<>(0);
         private Dimension gameboardSize = new Dimension(getWidth() / BLOCK_SIZE - 2, getHeight() / BLOCK_SIZE - 2);
+
         public void addPoint(int x, int y) {
             points.add(new Point(x, y));
             repaint();
@@ -298,12 +295,7 @@ public class ConwaysGameOfLife extends JFrame {
         public void paintComponent(Graphics g) {
             super.paintComponent(g);
             g.setColor(Color.blue);
-
-            try {
-                points.forEach(newPoint -> drawScaledPoint(g, newPoint));
-            } catch (ConcurrentModificationException ignored) {
-            }
-
+            points.forEach(newPoint -> drawScaledPoint(g, newPoint));
             setupGrid(g);
         }
 
@@ -320,11 +312,11 @@ public class ConwaysGameOfLife extends JFrame {
             }
 
             for (int i = 0; i <= gameboardSize.height; i++) {
-                drawVerticalLine(g, i);
+                drawScaledVerticalLine(g, i);
             }
         }
 
-        private void drawVerticalLine(Graphics g, int i) {
+        private void drawScaledVerticalLine(Graphics g, int i) {
             g.drawLine(BLOCK_SIZE, ((i * BLOCK_SIZE) + BLOCK_SIZE),
                     BLOCK_SIZE * (gameboardSize.width + 1), ((i * BLOCK_SIZE) + BLOCK_SIZE));
         }
@@ -373,35 +365,18 @@ public class ConwaysGameOfLife extends JFrame {
             repaint();
         }
 
-        private int getSurrounding(boolean[][] gameBoard, int i, int j) {
-            int surrounding = 0;
-
-            if (gameBoard[i - 1][j - 1]) {
-                surrounding++;
-            }
-            if (gameBoard[i - 1][j]) {
-                surrounding++;
-            }
-            if (gameBoard[i - 1][j + 1]) {
-                surrounding++;
-            }
-            if (gameBoard[i][j - 1]) {
-                surrounding++;
-            }
-            if (gameBoard[i][j + 1]) {
-                surrounding++;
-            }
-            if (gameBoard[i + 1][j - 1]) {
-                surrounding++;
-            }
-            if (gameBoard[i + 1][j]) {
-                surrounding++;
-            }
-            if (gameBoard[i + 1][j + 1]) {
-                surrounding++;
-            }
-
-            return surrounding;
+        private static int getSurrounding(boolean[][] gameBoard, int i, int j) {
+            return (int) Stream.of(
+                    gameBoard[i - 1][j - 1],
+                    gameBoard[i - 1][j],
+                    gameBoard[i - 1][j + 1],
+                    gameBoard[i][j - 1],
+                    gameBoard[i][j + 1],
+                    gameBoard[i + 1][j - 1],
+                    gameBoard[i + 1][j],
+                    gameBoard[i + 1][j + 1])
+                    .filter(fieldIsSet -> fieldIsSet)
+                    .count();
         }
     }
 }
